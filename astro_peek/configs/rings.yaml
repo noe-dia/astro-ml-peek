@@ -20,9 +20,9 @@ data:
   data_split: null
 
 trainer:
-  epochs: 100  
+  epochs: 10  
   optimizer: "adam"
-  batch_size: 32
+  batch_size: 16
   lr: 1e-3
   seed: 42
-  device: "cuda"
+  device: "auto"

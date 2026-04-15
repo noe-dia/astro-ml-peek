@@ -35,6 +35,9 @@ def training(cfg_dir):
     # Instantiating the neural networks: 
     trainer_cfg = cfg["trainer"]
     device = trainer_cfg["device"]
+    print(device)
+    if device == "auto": 
+        device = "cuda" if torch.cuda.is_available() else "cpu"
     encoder_features_cfg = cfg["encoder_features"]
     encoder_features = Encoder(encoder_features_cfg).to(device)
 
@@ -67,7 +70,7 @@ def training(cfg_dir):
             optimizer.step()
             losses.append(loss.item())
             epoch_loss += loss.item()
-            pbar.set_description(f"Epoch = {epoch+1}/{epochs}| Loss = {loss.item()}")   
+            pbar.set_description(f"Loss = {loss.item()}")   
 
         epoch_losses.append(epoch_loss)
 
@@ -83,6 +86,7 @@ def training(cfg_dir):
             ax.plot(epoch_losses)
             ax.set(xlabel = "Epochs", ylabel = "Loss") 
             plt.show()
-            # plt.savefig("data/")
+
+
     
     return (encoder_features, encoder_labels) 
