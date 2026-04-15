@@ -13,9 +13,7 @@
 
 
 module load arrow/16 cuda/12.6
-source $HOME/bridge_jax/bin/activate # Environment activation
-export EXP_CFG_DIR=images.mnist
-
+source $HOME/causal_env/bin/activate # Environment activation
 
 cd /home/noedia/projects/def-lplevass/noedia/crl/astro-ml-peek/astro_peek/runner
 

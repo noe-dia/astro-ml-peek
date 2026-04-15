@@ -6,7 +6,7 @@
 #SBATCH --account=def-lplevass
 #SBATCH --mem=20G
 #SBATCH --cpus-per-task=1
-#SBATCH --job-name=random_seed_parallel
+#SBATCH --job-name=latent_dim
 #SBATCH --array=1
 #SBATCH --output=jobout/%x_%A_%a.out
 
