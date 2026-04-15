@@ -1,0 +1,26 @@
+encoder_features:
+  backbone: "cnn"
+  backbone_cfg: 
+    backbone: "efficientnet_v2_s"
+    hidden_dim: 64
+    dropout_rate: 0.1
+    output_dim: 2
+
+encoder_labels:
+  backbone: "mlp"
+  backbone_cfg: 
+    input_dim: 2
+    layer_widths: [8, 8, 8]
+    output_dim: 2
+    activation_func: "silu"
+    activate_final: False
+
+data:
+  path: "C:/Users/Admin/Desktop/Research/Projects/classes/causal_representation/data"
+
+trainer:
+  epochs: 100  
+  optimizer: "adam"
+  lr: 1e-3
+  seed: 42
+  device: "gpu"
