@@ -65,7 +65,7 @@ def training(cfg_dir):
             predicted_latent_a = encoder_features(features)
             predicted_latent_b = labels #encoder_labels(labels)
             log_likelihood = (predicted_latent_a * predicted_latent_b).sum(dim = -1) # = log p(y |  x, S) (up to some constant)
-            loss = - torch.mean(log_likelihood) # average likelihood over the batch 
+            loss = - torch.mean(log_likelihood) # average negative log-likelihood over the batch 
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
