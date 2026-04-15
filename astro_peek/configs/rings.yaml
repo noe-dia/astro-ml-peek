@@ -16,11 +16,13 @@ encoder_labels:
     activate_final: False
 
 data:
-  path: "C:/Users/Admin/Desktop/Research/Projects/classes/causal_representation/data"
+  path: "../data/rings"
+  data_split: null
 
 trainer:
   epochs: 100  
   optimizer: "adam"
+  batch_size: 32
   lr: 1e-3
   seed: 42
-  device: "gpu"
+  device: "cuda"

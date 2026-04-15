@@ -20,7 +20,7 @@ def training(cfg_dir):
 
     # Loading dataset
     data_cfg = cfg["data"]
-    data_split = cfg['data_split'] # (train_size, val_size, test_size) (must be numbers between 0 and 1)
+    data_split = data_cfg['data_split'] # (train_size, val_size, test_size) (must be numbers between 0 and 1)
     dset = load_from_disk(data_cfg["path"])
     dset = dset.with_format("torch")
 
@@ -33,43 +33,43 @@ def training(cfg_dir):
         train_set = dset
 
     # Instantiating the neural networks: 
+    trainer_cfg = cfg["trainer"]
+    device = trainer_cfg["device"]
     encoder_features_cfg = cfg["encoder_features"]
-    encoder_features = Encoder(encoder_features_cfg)
+    encoder_features = Encoder(encoder_features_cfg).to(device)
 
     encoder_labels_cfg = cfg["encoder_labels"]
-    encoder_labels = Encoder(encoder_labels_cfg)
+    encoder_labels = Encoder(encoder_labels_cfg).to(device)
 
     # Setting hyperparameters: 
-    trainer_cfg = cfg["trainer"]
     epochs = trainer_cfg["epochs"]
     batch_size = trainer_cfg["batch_size"]
     optimizer_name = trainer_cfg["optimizer"]
-    lr = trainer_cfg["lr"]
-    optimizer = OPTIMIZER_REGISTRY[optimizer_name](encoder_features.parameters() + encoder_labels.parameters(), lr = lr)
-    device = trainer_cfg["device"]
+    lr = float(trainer_cfg["lr"])
+    optimizer = OPTIMIZER_REGISTRY[optimizer_name](list(encoder_features.parameters()) + list(encoder_labels.parameters()), lr = lr)
 
 
-    train_set = dset["train"].iter(batch_size = batch_size, drop_last_batch=True)
-    val_set = dset["val"].iter()
+    train_set = train_set.iter(batch_size = batch_size, drop_last_batch=True)
+    # val_set = dset["val"].iter()
     losses = []
     epoch_losses = []
-    for epoch in (pbar:= tqdm(epochs)): 
+    for epoch in (pbar:= tqdm(range(epochs))): 
         epoch_loss = 0
-        for data in dset: 
+        for data in train_set: 
             features, labels = data['image'].to(device), data['theta'].to(device)
 
             optimizer.zero_grad()
             predicted_latent_a = encoder_features(features)
-            predicted_latent_b = encoder_labels(labels)
+            predicted_latent_b = labels #encoder_labels(labels)
             log_likelihood = (predicted_latent_a * predicted_latent_b).sum(dim = -1) # = log p(y |  x, S) (up to some constant)
             loss = - torch.mean(log_likelihood) # average likelihood over the batch 
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
             epoch_loss += loss.item()
+            pbar.set_description(f"Epoch = {epoch+1}/{epochs}| Loss = {loss.item()}")   
 
         epoch_losses.append(epoch_loss)
-        pbar.set_description(f"Epoch = {epoch}/{epochs}| Loss = {loss.item()}")   
 
         if ((epoch+1)%10) == 0:
             fig, axs = plt.subplots(1, 2, figsize = (12, 4))
@@ -82,3 +82,7 @@ def training(cfg_dir):
             ax = axs[1]
             ax.plot(epoch_losses)
             ax.set(xlabel = "Epochs", ylabel = "Loss") 
+            plt.show()
+            # plt.savefig("data/")
+    
+    return (encoder_features, encoder_labels) 

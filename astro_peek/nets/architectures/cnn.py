@@ -4,7 +4,7 @@ from torchvision.models.efficientnet import efficientnet_b0, efficientnet_b2, ef
 
 class CNN(nn.Module):
     def __init__(self, cfg):
-        super().__init__()
+        super(CNN, self).__init__()
         last_dim = 1280  # For efficientnet_b0
         backbone  = cfg["backbone"]
         if backbone == "efficientnet_b0":
