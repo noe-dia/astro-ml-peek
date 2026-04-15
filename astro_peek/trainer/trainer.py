@@ -28,6 +28,7 @@ def training(cfg_dir):
         dset = dset.train_test_split(train_size = data_split["train"], test_size=data_split["test"] + data_split["val"], seed = seed)
         train_set, val_w_test_set = dset['train'], dset['test']
         val_w_test_set = val_w_test_set.train_test_split(train_size = data_split["val"], test_size=data_split["test"], seed = seed)
+        val_set, test_set = val_w_test_set['train'], val_w_test_set['test'] 
     else:
         train_set = dset
 
