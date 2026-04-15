@@ -87,6 +87,21 @@ def training(cfg_dir):
             ax.set(xlabel = "Epochs", ylabel = "Loss") 
             plt.show()
 
-
+    # Saving the models (we might want to change that to save the models during the training loop instead according to some criterion)
+    print("Saving encoder features model")
+    torch.save(
+        {"model": encoder_features.state_dict(), 
+        "model_cfg": encoder_features_cfg, 
+        "seed": trainer_cfg["seed"]
+        }, 
+        encoder_features_cfg["save_dir"])
+    
+    print("Saving encoder labels model")
+    torch.save(
+        {"model": encoder_labels.state_dict(), 
+        "model_cfg": encoder_labels_cfg, 
+        "seed": trainer_cfg["seed"]
+        }, 
+        encoder_labels_cfg["save_dir"])
     
     return (encoder_features, encoder_labels) 

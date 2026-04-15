@@ -5,6 +5,7 @@ encoder_features:
     hidden_dim: 64
     dropout_rate: 0.1
     output_dim: 2
+  save_dir: "/home/noedia/scratch/crl/ring_experiment/models"
 
 encoder_labels:
   backbone: "mlp"
@@ -14,15 +15,16 @@ encoder_labels:
     output_dim: 2
     activation_func: "silu"
     activate_final: False
+  save_dir: "/home/noedia/scratch/crl/ring_experiment/models"
 
 data:
   path: "../data/rings"
   data_split: null
 
 trainer:
-  epochs: 10  
+  epochs: 50  
   optimizer: "adam"
-  batch_size: 16
+  batch_size: 64
   lr: 1e-3
   seed: 42
   device: "auto"
