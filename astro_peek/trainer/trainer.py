@@ -6,6 +6,7 @@ from astro_peek.nets.encoder_base import Encoder
 from tqdm import tqdm 
 import matplotlib.pyplot as plt 
 import os 
+from .transforms.py import TRANSFORM_REGISTRY
 OPTIMIZER_REGISTRY = {
     "adam": optim.Adam
 }
@@ -52,7 +53,7 @@ def training(cfg):
     optimizer_name = trainer_cfg["optimizer"]
     lr = float(trainer_cfg["lr"])
     optimizer = OPTIMIZER_REGISTRY[optimizer_name](list(encoder_features.parameters()) + list(encoder_labels.parameters()), lr = lr)
-
+    transform_features = trainer_cfg["transform"]
 
     # val_set = dset["val"].iter()
     losses = []
@@ -66,7 +67,7 @@ def training(cfg):
             features, labels = data['image'].to(device), data['theta'].to(device)
 
             if transform_features is not None:
-                features, labels = ... # apply transform to get new features 
+                features, labels = TRANSFORM_REGISTRY[transform_features](...) # apply transform to get new features 
 
             optimizer.zero_grad()
             predicted_latent_a = encoder_features(features)
