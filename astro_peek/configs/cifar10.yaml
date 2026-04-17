@@ -1,0 +1,31 @@
+encoder_features:
+  backbone: "mlp"
+  backbone_cfg: 
+    input_dim: 2
+    layer_widths: [256, 256, 256]
+    output_dim: 64
+    activation_func: "silu"
+    activate_final: False
+  save_dir: "/home/noedia/links/scratch/crl/experiments/rings/models/encoder_features"
+
+encoder_labels:
+  backbone: "mlp"
+  backbone_cfg: 
+    input_dim: 2
+    layer_widths: [256, 256, 256]
+    output_dim: 64
+    activation_func: "silu"
+    activate_final: False
+  save_dir: "/home/noedia/links/scratch/crl/experiments/rings/encoder_labels"
+
+data:
+  path: "/home/ssalhi/scratch/cifar10_data"
+  data_split: null
+
+trainer:
+  epochs: 50  
+  optimizer: "adam"
+  batch_size: 64
+  lr: 1e-3
+  seed: 42
+  device: "auto"
