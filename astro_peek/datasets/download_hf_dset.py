@@ -16,11 +16,15 @@ def main(args):
     images = np.array(dset["train"][:25]["image"])
     labels = np.array(dset["train"][:25]["label"])
     print(images.min(), images.max())
+
+    # Label names 
+    classes = dset['train'].features['label'].names
     fig, axs = plt.subplots(5, 5, figsize = (6 * 5, 6 * 5))
 
     for i, ax in enumerate(axs.flatten()): 
         ax.imshow(images[i].squeeze())
-        ax.set(title = f"{labels[i]}")
+        class_name = classes[labels[i]]
+        ax.set(title = f"{class_name}")
     plt.savefig(args.output_dir + "/dset_visualization.png", bbox_inches = "tight")
 if __name__ == "__main__":
     import argparse
