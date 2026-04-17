@@ -3,7 +3,7 @@
 # SLURM parameters for every job submitted
 #SBATCH --tasks=1
 #SBATCH --time=00-03:00         # time (DD-HH:MM)
-#SBATCH --account=def-lplevass
+#SBATCH --account=rrg-lplevass
 #SBATCH --mem=20G
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=h100_20gb
@@ -23,7 +23,7 @@ MIN_SEED=37
 MAX_SEED=47
 SEEDS=($(seq $MIN_SEED $MAX_SEED))
 CURRENT_SEED=${SEEDS[$SLURM_ARRAY_TASK_ID]}
-
+echo $CURRENT_SEED
 python runner/training.py\
     trainer.seed=$CURRENT_SEED\
     encoder_features.save_dir="$OUTPUT_DIR/models/encoder_features/"\
