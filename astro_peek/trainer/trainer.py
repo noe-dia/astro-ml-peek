@@ -65,8 +65,8 @@ def training(cfg):
         for data in train_loader: 
             features, labels = data['image'].to(device), data['theta'].to(device)
 
-            if transform_features:
-                features, labels = # apply transform 
+            if transform_features is not None:
+                features, labels = ... # apply transform to get new features 
 
             optimizer.zero_grad()
             predicted_latent_a = encoder_features(features)
