@@ -21,30 +21,35 @@ def training(cfg):
     # Loading dataset
     data_cfg = cfg["data"]
     data_split = data_cfg['data_split'] # (train_size, val_size, test_size) (must be numbers between 0 and 1)
-    # dset = load_from_disk(data_cfg["path"])
-    # dset = dset.with_format("torch")
+
+    # The func load_from_disk will separate the train and the test folder of the directory on its own. 
+    dset = load_from_disk(data_cfg["path"])
+    dset = dset.with_format("torch")
     
     # select the train and test set
-    dset_train = load_from_disk(data_cfg["train_path"])
-    dset_test = load_from_disk(data_cfg["test_path"])
-    dset_train = dset_train.with_format("torch")
-    test_set = dset_test.with_format("torch")
+    # dset_train = load_from_disk(data_cfg["train_path"])
+    # dset_test = load_from_disk(data_cfg["test_path"])
+    # dset_train = dset_train.with_format("torch")
+    # test_set = dset_test.with_format("torch")
     
-    if data_split is not None:
-        dset_train = dset_train.train_test_split(train_size = data_split["train"], test_size=data_split["val"], seed=seed)
-        train_set, val_set = dset_train["train"], dset_train["test"]
+    train_set = dset['train']
+    test_set = dset['test']
 
-    # if data_split is not None: 
-    #     dset = dset.train_test_split(train_size = data_split["train"], test_size=data_split["test"] + data_split["val"], seed = seed)
-    #     train_set, val_w_test_set = dset['train'], dset['test']
-    #     val_w_test_set = val_w_test_set.train_test_split(train_size = data_split["val"], test_size=data_split["test"], seed = seed)
-    #     val_set, test_set = val_w_test_set['train'], val_w_test_set['test'] 
-    else:
-        train_set = dset_train
+    # if data_split is not None:
+    #     dset_train = dset_train.train_test_split(train_size = data_split["train"], test_size=data_split["val"], seed=seed)
+    #     train_set, val_set = dset_train["train"], dset_train["test"]
+
+    # # if data_split is not None: 
+    # #     dset = dset.train_test_split(train_size = data_split["train"], test_size=data_split["test"] + data_split["val"], seed = seed)
+    # #     train_set, val_w_test_set = dset['train'], dset['test']
+    # #     val_w_test_set = val_w_test_set.train_test_split(train_size = data_split["val"], test_size=data_split["test"], seed = seed)
+    # #     val_set, test_set = val_w_test_set['train'], val_w_test_set['test'] 
+    # else:
+    #     train_set = dset_train
         
     print('training set size: ', train_set.shape)
     print('test set size: ', test_set.shape)
-    print('val set size: ', val_set.shape)
+    # print('val set size: ', val_set.shape)
 
     # Instantiating the neural networks: 
     trainer_cfg = cfg["trainer"]
