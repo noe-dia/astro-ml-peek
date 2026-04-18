@@ -19,8 +19,11 @@ encoder_labels:
   save_dir: "/home/noedia/links/scratch/crl/experiments/rings/encoder_labels"
 
 data:
-  path: "/home/ssalhi/scratch/cifar10_data"
-  data_split: null
+  train_path: "/home/ssalhi/scratch/cifar10_data/train"
+  test_path: "/home/ssalhi/scratch/cifar10_data/test"
+  data_split: 
+    train: 0.8
+    val: 0.2 
 
 trainer:
   epochs: 50  
