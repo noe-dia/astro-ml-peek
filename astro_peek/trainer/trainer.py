@@ -13,7 +13,7 @@ OPTIMIZER_REGISTRY = {
 
 
 def normalize(z):
-    return z / np.linalg.norm(z, axis=1, keepdims=True)
+    return z / torch.linalg.norm(z, dim=1, keepdim=True)
 
 def training(cfg): 
 
