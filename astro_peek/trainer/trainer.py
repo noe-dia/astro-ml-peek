@@ -89,10 +89,28 @@ def training(cfg):
                 features, labels = TRANSFORM_REGISTRY[transform_features](...) # apply transform to get new features 
 
             optimizer.zero_grad()
-            predicted_latent_a = encoder_features(features)
-            predicted_latent_b = encoder_labels(labels)
-            log_likelihood = (predicted_latent_a * predicted_latent_b).sum(dim = -1) # = log p(y |  x, S) (up to some constant)
-            loss = - torch.mean(log_likelihood) # average negative log-likelihood over the batch 
+
+            # Old code (wrong)
+            # predicted_latent_a = encoder_features(features)
+            # predicted_latent_b = encoder_labels(labels)
+            # log_likelihood = (predicted_latent_a * predicted_latent_b).sum(dim = -1) # = log p(y |  x, S) (up to some constant)
+            # loss = - torch.mean(log_likelihood) # average negative log-likelihood over the batch 
+
+            # New code: computes similarity scores between all the pairs whithin the batch for normalization.
+            latent_features = encoder_features(features)
+            latent_labels = encoder_labels(labels)
+            logits = latent_features @ latent_labels.T 
+
+            # Positive pairs are on the diagonal
+            pos_pairs = torch.diag(logits)
+
+            # Normalization is obtained by summing over all the latent labels (the y_0)
+            log_normalization = torch.logsumexp(logits, dim=1)
+            
+            # Log-likelihood = f(x)g(y) - log(normalization)
+            log_likelihood = pos_pairs - log_normalization
+            loss = -log_likelihood.mean() 
+
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
