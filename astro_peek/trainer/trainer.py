@@ -83,10 +83,14 @@ def training(cfg):
         train_loader = train_set.iter(batch_size = batch_size, drop_last_batch=True) # makes the dset an iterable
 
         for data in train_loader: 
-            features, labels = data['image'].to(device), data['theta'].to(device)
 
             if transform_features is not None:
-                features, labels = TRANSFORM_REGISTRY[transform_features](...) # apply transform to get new features 
+                dset.set_format(type="numpy", columns=["image"])
+                train_images = dset["train"][:]["image"]
+                print("applying patch transform...")
+                features, labels = TRANSFORM_REGISTRY[transform_features](train_images) # apply transform to get new features 
+            else: 
+                features, labels = data['image'].to(device), data['theta'].to(device)
 
             optimizer.zero_grad()
 
