@@ -13,7 +13,7 @@ OPTIMIZER_REGISTRY = {
 
 
 def normalize(z):
-    return z / np.linalg.norm(z, axis=1, keepdims=True)
+    return z / torch.linalg.norm(z, dim=1, keepdim=True)
 
 def training(cfg): 
 
@@ -68,37 +68,47 @@ def training(cfg):
         train_loader = train_set.iter(batch_size = batch_size, drop_last_batch=True) # makes the dset an iterable
 
         for data in train_loader: 
-
+            features, labels = data['image'].to(device), data['theta'].to(device)
+            
             if transform_features is not None:
-                dset.set_format(type="numpy", columns=["image"])
-                train_images = dset["train"][:]["image"]
-                print("applying patch transform...")
-                features, labels = TRANSFORM_REGISTRY[transform_features](train_images) # apply transform to get new features 
-            else: 
-                features, labels = data['image'].to(device), data['theta'].to(device)
-
+                features, labels = TRANSFORM_REGISTRY[transform_features](...) # apply transform to get new features 
+            if labels.ndim == 1: 
+                labels = labels.unsqueeze(1)
             optimizer.zero_grad()
 
             # Computing similarity scores between all the pairs within the batch for normalization.
-            latent_features = normalize(encoder_features(features))
-            latent_labels = normalize(encoder_labels(labels))
+            latent_features = encoder_features(features)
+            latent_labels = encoder_labels(labels)
+            # S = torch.tensor([[0.0], [1.0]]).to(device) # just for testing
+            # latent_S = encoder_labels(S)
+            if trainer_cfg["normalize"]:
+                latent_labels = normalize(latent_labels)
+                latent_features = normalize(latent_features) 
+                # latent_S = normalize(latent_S)
+
+
             logits = latent_features @ latent_labels.T 
 
             # Positive pairs are on the diagonal
-            similarity_score = torch.diag(logits)
+            # similarity_score = torch.diag(logits)
 
             # Normalization is obtained by summing over all the latent labels (the y_0)
-            log_normalization = torch.logsumexp(logits, dim=1)
+            # S_logits = latent_features @ latent_S.T
+            # log_normalization = torch.logsumexp(S_logits, dim=1)
             
             # Log-likelihood = f(x)g(y) - log(normalization)
-            log_likelihood = similarity_score - log_normalization
-            loss = -log_likelihood.mean() 
+            # log_likelihood = similarity_score - log_normalization
+            # loss = -log_likelihood.mean() 
+            logits = latent_features @ latent_labels.T  # (B, B)
+
+            log_probs = logits - torch.logsumexp(logits, dim=1, keepdim=True)
+            loss = -torch.diag(log_probs).mean()
 
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
             epoch_loss += loss.item()
-            pbar.set_description(f"Loss = {loss.item():.2g}")   
+            pbar.set_description(f"Loss = {loss.item():.2f}")   
 
         epoch_losses.append(epoch_loss)
 
@@ -137,4 +147,4 @@ def training(cfg):
     )
     
     
-    return (encoder_features, encoder_labels) 
+    return (encoder_features, encoder_labels, epoch_losses) 

@@ -1,0 +1,33 @@
+encoder_features:
+  backbone: "mlp"
+  backbone_cfg: 
+    input_dim: 2
+    layer_widths: [32, 32, 32]
+    output_dim: 2
+    activation_func: "silu"
+    activate_final: False
+  save_dir: "/home/noedia/links/scratch/crl/experiments/rings/encoder_features"
+
+encoder_labels:
+  backbone: "mlp"
+  backbone_cfg: 
+    input_dim: 1
+    layer_widths: [32, 32, 32]
+    output_dim: 2
+    activation_func: "silu"
+    activate_final: False
+  save_dir: "/home/noedia/links/scratch/crl/experiments/rings/encoder_labels"
+
+data:
+  path: "C:/Users/Admin/Desktop/Research/Projects/classes/causal_representation/data/two_moons"
+  data_split: null
+
+trainer:
+  epochs: 10  
+  optimizer: "adam"
+  batch_size: 4096
+  lr: 1e-2
+  seed: 43
+  device: "auto"
+  normalize: true
+  transform: null
