@@ -1,7 +1,7 @@
 encoder_features:
   backbone: "mlp"
   backbone_cfg: 
-    input_dim: 2
+    input_dim: 768
     layer_widths: [256, 256, 256]
     output_dim: 64
     activation_func: "silu"
@@ -11,7 +11,7 @@ encoder_features:
 encoder_labels:
   backbone: "mlp"
   backbone_cfg: 
-    input_dim: 2
+    input_dim: 768
     layer_widths: [256, 256, 256]
     output_dim: 64
     activation_func: "silu"

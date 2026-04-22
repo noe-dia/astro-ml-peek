@@ -1,5 +1,7 @@
 import torch 
-from torch import nn, optim
+from torch import nn, optim, linalg
+from torch.utils.data import TensorDataset, DataLoader
+import pandas as pd
 from astro_peek.utils import load_yaml
 from datasets import load_from_disk
 from astro_peek.nets.encoder_base import Encoder
@@ -7,13 +9,18 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt 
 import os 
 from .transforms import TRANSFORM_REGISTRY
+
+import numpy as np 
+import time
+
 OPTIMIZER_REGISTRY = {
     "adam": optim.Adam
 }
 
 
 def normalize(z):
-    return z / np.linalg.norm(z, axis=1, keepdims=True)
+    # return z / np.linalg.norm(z, axis=1, keepdims=True)
+    return torch.linalg.norm(z, dim=1, keepdim=True)
 
 def training(cfg): 
 
@@ -63,19 +70,32 @@ def training(cfg):
     losses = []
     epoch_losses = []
     print(epochs)
+    
+    train_loader = DataLoader(
+        train_set,
+        batch_size=batch_size,
+        shuffle=True,
+        drop_last=True,
+        num_workers=1,
+        pin_memory=True,
+        persistent_workers=True,
+    )
+    
+    # train_images = torch.tensor(torch.load("/home/ssalhi/scratch/cifar10_data/train_images.pt", weights_only=False)).to(device).squeeze()
     for epoch in (pbar:= tqdm(range(int(epochs)))): 
         epoch_loss = 0
-        train_loader = train_set.iter(batch_size = batch_size, drop_last_batch=True) # makes the dset an iterable
+        # train_loader = train_set.iter(batch_size = batch_size, drop_last_batch=True) # makes the dset an iterable
 
-        for data in train_loader: 
+        for batch in train_loader: 
+            images = batch["image"].to(device, non_blocking=True)
 
             if transform_features is not None:
-                dset.set_format(type="numpy", columns=["image"])
-                train_images = dset["train"][:]["image"]
-                print("applying patch transform...")
-                features, labels = TRANSFORM_REGISTRY[transform_features](train_images) # apply transform to get new features 
-            else: 
-                features, labels = data['image'].to(device), data['theta'].to(device)
+                features, labels = TRANSFORM_REGISTRY[transform_features](images)
+            else:
+                labels = batch["theta"].to(device, non_blocking=True)  # or batch["label"]
+                features = images
+
+            features, labels = features.float(), labels.float()
 
             optimizer.zero_grad()
 
@@ -135,6 +155,14 @@ def training(cfg):
         }, 
         encoder_labels_cfg["save_dir"] + f"seed_{seed}_latentdim_{latent_dim}.pt"
     )
+    
+    print("saving losses")
+    df = pd.DataFrame({
+        "epoch": list(range(len(epoch_losses))),
+        "loss": epoch_losses
+    })
+
+    df.to_csv(encoder_labels_cfg["save_dir"]+"epoch_losses.csv", index=False)
     
     
     return (encoder_features, encoder_labels) 
