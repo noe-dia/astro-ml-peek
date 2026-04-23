@@ -1,37 +1,88 @@
 import numpy as np 
 from cca_zoo.linear import CCA
 from cca_zoo.linear import MCCA
+import matplotlib.pyplot as plt
 
 class CCA_Score:
     def __init__(self, model_list):
-        self.model_list=model_list # should have shape (nmodels, nsamples, ndims) where ndims is the number of latent dimensions
-        self.ndims=self.model_list.shape[2]
-        self.nsamples = self.model_list.shape[1]
+        self.model_list=model_list # should have shape (nmodels, nsamples, ndims) where ndims is the number of latent dimensions. Data should be already mapped to latents before applying CCA
+        self.ndims=self.model_list.shape[-1]
         
-    def compute_all_pairwise_cca(self, train_frac=0.8):
-        # models must have the same latent dimensions, otherwise PCA must be applied first 
-        # split the samples into train and test data for training the CCA model and then calculating the scores 
-        ntrain = train_frac * self.nsamples 
-        train_views = self.model_list[:, :ntrain, :]
-        test_views = self.model_list[:, ntrain:, :]
+    def compute_all_pairwise_cca(self):
+        '''This function computes the pairwise CCA values of all possible pairs of models, using the self.model_list. It requires that all models have the same latent dimensions and 
+        number of samples. 
+        parameters: 
+        - self.model_list: shape of (nmodels, nsamples, nlatents)
+        
+        returns: 
+        - corrs_MCCA: a list of correlated pairwise CCA values for each possible pair of models. Shape of (nmodels, nmodels, nlatents)
+        
+        NOTE: to access the correlated CCA value of model N and model M for latent R, look at corrs_MCCA[N-1,M-1,R-1]
+        '''
+        
+        # fit the CCA model with the latents
+        views = self.model_list
         
         # initialize the MCCA model and train 
-        model_mcca = MCCA(latent_dimensions=self.ndims).fit(train_views) 
+        model_mcca = MCCA(latent_dimensions=self.ndims).fit(views) 
         
         # calculate the pairwise CCA values for each pair of models
-        corrs_MCCA = model_mcca.pairwise_correlations(test_views)
+        corrs_MCCA = model_mcca.pairwise_correlations(views)
         
         return corrs_MCCA
     
-    def compute_one_pair_cca(self, train_frac=0.8):
-        # used if model_list has only two models 
-        ntrain = train_frac * self.nsamples 
-        train_views = self.model_list[:, :ntrain, :]
-        test_views = self.model_list[:, ntrain:, :]
+    def compute_one_pair_cca(self):
+        '''This function computes the pairwise CCA values for all latent dimensions between two models only. Use only if your model_list contains just two models. 
+        parameters: 
+        - self.model_list: shape of (2, nsamples, nlatents)
         
-        model = CCA(latent_dimensions=self.ndims).fit(train_views) 
+        returns: 
+        - corrs: a list of correlated pairwise CCA values between the two modesl for each latent. Shape of (nlatents,)'''
+        views = self.model_list
         
-        corrs = model.score(test_views)
+        model = CCA(latent_dimensions=self.ndims).fit(views) 
+        
+        corrs = model.score(views)
         
         return corrs
+    
+    def calculate_mean_cca(self, corrs):
+        '''This function computes the mean CCA values for each latent across all models. 
+        parameters: 
+        - corrs: shape of (nmodels, nmodels, nlatents)
+        
+        returns: 
+        - mean_corrs: mean CCA values across all models for each latent. Shape of (nlatents,)'''
+        mean_corrs = np.mean(corrs, axis=[0,1])
+        
+        return mean_corrs
+    
+    def plot_cca_v_latent(self, corrs, save_loc=None, models=[0,1]):
+        '''This function plots the pairwise CCA values of two models for all latents.
+        parameters: 
+        - corrs: the calculated CCA values. Shape of either (nmodels, nmodels, nlatents) if you have more than 2 models, else shape (nlatents,)
+        - save_loc: directory where you want to save the plot. Leave as None if you don't want to save it
+        - models: the models you want to compare (numbered according to python indexing)'''
+        
+        if corrs.ndim == 1:
+            i, j = 1,2
+            scores = corrs
+            
+        else:
+            i, j = models[0], models[1] 
+            scores = corrs[i,j,:]
+        
+        dims = np.arange(1, self.ndims+1)
+        
+        plt.figure(figsize=(13,4))
+        plt.plot(dims, scores, "o", label="CCA")
+        plt.xlabel("Latent dimension")
+        plt.ylabel("CCA value")
+        plt.title("CCA value vs latent dimenion for models "+str(i+1)+" and "+str(j+1))
+        plt.xticks(dims)
+        plt.ylim(0,1)
+        if save_loc is not None: 
+            plt.savefig(save_loc+f'CCA_v_latents_models_{i}_and_{j}.png')
+        plt.show()
+        
         

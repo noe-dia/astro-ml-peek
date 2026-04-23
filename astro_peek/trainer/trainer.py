@@ -9,18 +9,13 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt 
 import os 
 from .transforms import TRANSFORM_REGISTRY
-
-import numpy as np 
-import time
-
 OPTIMIZER_REGISTRY = {
     "adam": optim.Adam
 }
 
 
 def normalize(z):
-    # return z / np.linalg.norm(z, axis=1, keepdims=True)
-    return torch.linalg.norm(z, dim=1, keepdim=True)
+    return z / torch.linalg.norm(z, dim=1, keepdim=True)
 
 def training(cfg): 
 
