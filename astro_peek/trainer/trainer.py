@@ -108,22 +108,22 @@ def training(cfg):
             optimizer.step()
             losses.append(loss.item())
             epoch_loss += loss.item()
-            pbar.set_description(f"Loss = {loss.item():.2f}")   
+            pbar.set_description(f"Loss = {loss.item():.3f}")   
 
         epoch_losses.append(epoch_loss)
 
-        # if ((epoch+1)%10) == 0:
-        #     fig, axs = plt.subplots(1, 2, figsize = (12, 4))
+        if ((epoch+1)%10) == 0:
+            fig, axs = plt.subplots(1, 2, figsize = (12, 4))
 
-        #     ax = axs[0]
-        #     ax.plot(losses)
-        #     ax.set(xlabel = "Optimizer steps", ylabel = "Loss") 
+            ax = axs[0]
+            ax.plot(losses)
+            ax.set(xlabel = "Optimizer steps", ylabel = "Loss") 
 
             
-        #     ax = axs[1]
-        #     ax.plot(epoch_losses)
-        #     ax.set(xlabel = "Epochs", ylabel = "Loss") 
-        #     plt.show()
+            ax = axs[1]
+            ax.plot(epoch_losses)
+            ax.set(xlabel = "Epochs", ylabel = "Loss") 
+            plt.show()
 
     # Saving the models (we might want to change that to save the models during the training loop instead according to some criterion)
     print("Saving encoder features model")

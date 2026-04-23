@@ -3,7 +3,7 @@ encoder_features:
   backbone_cfg: 
     backbone: "efficientnet_v2_s"
     hidden_dim: 64
-    dropout_rate: 0.1
+    dropout_rate: 0.01
     output_dim: 2
   save_dir: "/home/noedia/links/scratch/crl/experiments/rings/models/encoder_features"
 
@@ -28,4 +28,5 @@ trainer:
   lr: 1e-3
   seed: 42
   device: "auto"
+  normalize: true
   transform: null
