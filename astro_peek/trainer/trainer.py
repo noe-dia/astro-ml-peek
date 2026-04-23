@@ -71,29 +71,30 @@ def training(cfg):
     epoch_losses = []
     print(epochs)
     
+    # CPU tensor only (no .to(device) here)
+    train_images = torch.load("/home/ssalhi/scratch/cifar10_data/train_images.pt", weights_only=False)
+    train_images = torch.as_tensor(train_images).squeeze().contiguous()
+
     train_loader = DataLoader(
-        train_set,
+        train_images,
         batch_size=batch_size,
         shuffle=True,
         drop_last=True,
-        num_workers=1,
+        num_workers=0,          # start with 0 for stability; try 2/4 later
         pin_memory=True,
-        persistent_workers=True,
+        # persistent_workers=True,  # only if num_workers > 0
     )
-    
-    # train_images = torch.tensor(torch.load("/home/ssalhi/scratch/cifar10_data/train_images.pt", weights_only=False)).to(device).squeeze()
-    for epoch in (pbar:= tqdm(range(int(epochs)))): 
-        epoch_loss = 0
-        # train_loader = train_set.iter(batch_size = batch_size, drop_last_batch=True) # makes the dset an iterable
 
-        for batch in train_loader: 
-            images = batch["image"].to(device, non_blocking=True)
+    for epoch in (pbar:= tqdm(range(int(epochs)))):
+        epoch_loss = 0
+        for batch in train_loader:
+            batch = batch.to(device, non_blocking=True)
 
             if transform_features is not None:
-                features, labels = TRANSFORM_REGISTRY[transform_features](images)
+                features, labels = TRANSFORM_REGISTRY[transform_features](batch)
             else:
                 labels = batch["theta"].to(device, non_blocking=True)  # or batch["label"]
-                features = images
+                features = batch["theta"].to(device, non_blocking=True)  # or batch["label"]
 
             features, labels = features.float(), labels.float()
 
@@ -162,7 +163,7 @@ def training(cfg):
         "loss": epoch_losses
     })
 
-    df.to_csv(encoder_labels_cfg["save_dir"]+"epoch_losses.csv", index=False)
+    df.to_csv('/home/ssalhi/astro-ml-peek/shell/cifar10_experiment/epoch_losses.csv', index=False)
     
     
     return (encoder_features, encoder_labels) 

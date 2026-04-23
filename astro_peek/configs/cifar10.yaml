@@ -27,7 +27,7 @@ data:
     val: 0.2 
 
 trainer:
-  epochs: 50  
+  epochs: 200  
   optimizer: "adam"
   batch_size: 64
   lr: 1e-3
