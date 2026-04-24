@@ -37,7 +37,7 @@ class CCA_Score:
         - self.model_list: shape of (2, nsamples, nlatents)
         
         returns: 
-        - corrs: a list of correlated pairwise CCA values between the two modesl for each latent. Shape of (nlatents,)'''
+        - corrs: a list of correlated pairwise CCA values between the two models for each latent. Shape of (nlatents,)'''
         views = self.model_list
         
         model = CCA(latent_dimensions=self.ndims).fit(views) 
@@ -53,11 +53,11 @@ class CCA_Score:
         
         returns: 
         - mean_corrs: mean CCA values across all models for each latent. Shape of (nlatents,)'''
-        mean_corrs = np.mean(corrs, axis=[0,1])
+        mean_corrs = np.mean(corrs, axis=(0,1))
         
         return mean_corrs
     
-    def plot_cca_v_latent(self, corrs, save_loc=None, models=[0,1]):
+    def plot_cca_v_latent(self, corrs, save_loc=None, models=[0,1], encoder_type='f(x)', mean=False):
         '''This function plots the pairwise CCA values of two models for all latents.
         parameters: 
         - corrs: the calculated CCA values. Shape of either (nmodels, nmodels, nlatents) if you have more than 2 models, else shape (nlatents,)
@@ -65,24 +65,32 @@ class CCA_Score:
         - models: the models you want to compare (numbered according to python indexing)'''
         
         if corrs.ndim == 1:
-            i, j = 1,2
+            i, j = 0,1
             scores = corrs
+            if mean:
+                title = "Mean CCA value across all models vs latent dimension for "+encoder_type
+                ylabel = "Mean CCA value"
+            else: 
+                title = "CCA value vs latent dimenion for "+encoder_type+", models "+str(i+1)+" and "+str(j+1)
+                ylabel = "CCA value"
             
         else:
             i, j = models[0], models[1] 
             scores = corrs[i,j,:]
+            title = "CCA value vs latent dimenion for "+encoder_type+", models "+str(i+1)+" and "+str(j+1)
+            ylabel = "CCA value"
         
         dims = np.arange(1, self.ndims+1)
         
         plt.figure(figsize=(13,4))
         plt.plot(dims, scores, "o", label="CCA")
         plt.xlabel("Latent dimension")
-        plt.ylabel("CCA value")
-        plt.title("CCA value vs latent dimenion for models "+str(i+1)+" and "+str(j+1))
+        plt.ylabel(ylabel)
+        plt.title(title)
         plt.xticks(dims)
         plt.ylim(0,1)
         if save_loc is not None: 
-            plt.savefig(save_loc+f'CCA_v_latents_models_{i}_and_{j}.png')
+            plt.savefig(save_loc+'CCA_v_latents_'+encoder_type+f'_models_{i}_and_{j}.png')
         plt.show()
         
         

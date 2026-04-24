@@ -33,4 +33,5 @@ trainer:
   lr: 1e-3
   seed: 42
   device: "auto"
+  normalize: true
   transform: "cifar10"
