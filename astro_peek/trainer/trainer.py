@@ -12,6 +12,9 @@ OPTIMIZER_REGISTRY = {
 }
 
 
+def normalize(z):
+    return z / torch.linalg.norm(z, dim=1, keepdim=True)
+
 def training(cfg): 
 
     # Setting the random seed: 
@@ -26,27 +29,9 @@ def training(cfg):
     dset = load_from_disk(data_cfg["path"])
     dset = dset.with_format("torch")
     
-    # select the train and test set
-    # dset_train = load_from_disk(data_cfg["train_path"])
-    # dset_test = load_from_disk(data_cfg["test_path"])
-    # dset_train = dset_train.with_format("torch")
-    # test_set = dset_test.with_format("torch")
-    
     train_set = dset['train']
     test_set = dset['test']
 
-    # if data_split is not None:
-    #     dset_train = dset_train.train_test_split(train_size = data_split["train"], test_size=data_split["val"], seed=seed)
-    #     train_set, val_set = dset_train["train"], dset_train["test"]
-
-    # # if data_split is not None: 
-    # #     dset = dset.train_test_split(train_size = data_split["train"], test_size=data_split["test"] + data_split["val"], seed = seed)
-    # #     train_set, val_w_test_set = dset['train'], dset['test']
-    # #     val_w_test_set = val_w_test_set.train_test_split(train_size = data_split["val"], test_size=data_split["test"], seed = seed)
-    # #     val_set, test_set = val_w_test_set['train'], val_w_test_set['test'] 
-    # else:
-    #     train_set = dset_train
-        
     print('training set size: ', train_set.shape)
     print('test set size: ', test_set.shape)
     # print('val set size: ', val_set.shape)
@@ -84,35 +69,61 @@ def training(cfg):
 
         for data in train_loader: 
             features, labels = data['image'].to(device), data['theta'].to(device)
-
+            
             if transform_features is not None:
                 features, labels = TRANSFORM_REGISTRY[transform_features](...) # apply transform to get new features 
-
+            if labels.ndim == 1: 
+                labels = labels.unsqueeze(1)
             optimizer.zero_grad()
-            predicted_latent_a = encoder_features(features)
-            predicted_latent_b = encoder_labels(labels)
-            log_likelihood = (predicted_latent_a * predicted_latent_b).sum(dim = -1) # = log p(y |  x, S) (up to some constant)
-            loss = - torch.mean(log_likelihood) # average negative log-likelihood over the batch 
+
+            # Computing similarity scores between all the pairs within the batch for normalization.
+            latent_features = encoder_features(features)
+            latent_labels = encoder_labels(labels)
+            # S = torch.tensor([[0.0], [1.0]]).to(device) # just for testing
+            # latent_S = encoder_labels(S)
+            if trainer_cfg["normalize"]:
+                latent_labels = normalize(latent_labels)
+                latent_features = normalize(latent_features) 
+                # latent_S = normalize(latent_S)
+
+
+            logits = latent_features @ latent_labels.T 
+
+            # Positive pairs are on the diagonal
+            # similarity_score = torch.diag(logits)
+
+            # Normalization is obtained by summing over all the latent labels (the y_0)
+            # S_logits = latent_features @ latent_S.T
+            # log_normalization = torch.logsumexp(S_logits, dim=1)
+            
+            # Log-likelihood = f(x)g(y) - log(normalization)
+            # log_likelihood = similarity_score - log_normalization
+            # loss = -log_likelihood.mean() 
+            logits = latent_features @ latent_labels.T  # (B, B)
+
+            log_probs = logits - torch.logsumexp(logits, dim=1, keepdim=True)
+            loss = -torch.diag(log_probs).mean()
+
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
             epoch_loss += loss.item()
-            pbar.set_description(f"Loss = {loss.item():.2g}")   
+            pbar.set_description(f"Loss = {loss.item():.3f}")   
 
         epoch_losses.append(epoch_loss)
 
-        # if ((epoch+1)%10) == 0:
-        #     fig, axs = plt.subplots(1, 2, figsize = (12, 4))
+        if ((epoch+1)%10) == 0:
+            fig, axs = plt.subplots(1, 2, figsize = (12, 4))
 
-        #     ax = axs[0]
-        #     ax.plot(losses)
-        #     ax.set(xlabel = "Optimizer steps", ylabel = "Loss") 
+            ax = axs[0]
+            ax.plot(losses)
+            ax.set(xlabel = "Optimizer steps", ylabel = "Loss") 
 
             
-        #     ax = axs[1]
-        #     ax.plot(epoch_losses)
-        #     ax.set(xlabel = "Epochs", ylabel = "Loss") 
-        #     plt.show()
+            ax = axs[1]
+            ax.plot(epoch_losses)
+            ax.set(xlabel = "Epochs", ylabel = "Loss") 
+            plt.show()
 
     # Saving the models (we might want to change that to save the models during the training loop instead according to some criterion)
     print("Saving encoder features model")
@@ -136,4 +147,4 @@ def training(cfg):
     )
     
     
-    return (encoder_features, encoder_labels) 
+    return (encoder_features, encoder_labels, epoch_losses) 
