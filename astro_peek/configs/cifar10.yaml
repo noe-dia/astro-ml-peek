@@ -22,9 +22,7 @@ data:
   # train_path: "/home/ssalhi/scratch/cifar10_data/train"
   # test_path: "/home/ssalhi/scratch/cifar10_data/test"
   path: "/home/ssalhi/scratch/cifar10_data"
-  data_split: 
-    train: 0.8
-    val: 0.2 
+  data_split: null # we should keep it to None and do the data split separately from the trainer.py file.
 
 trainer:
   epochs: 50  
