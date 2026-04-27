@@ -108,8 +108,8 @@ class R2_score:
         self.ndims = latent_list.shape[-1]
         self.latent_list = latent_list
 
-    def _fit_matrix(latent_a, latent_b, num_iter = 1000, lr = 1e-3):
-        linear_model = nn.Linear() 
+    def _fit_matrix(self, latent_a, latent_b, num_iter = 1000, lr = 1e-3):
+        linear_model = nn.Linear(self.ndims, self.ndims) 
         optimizer = nn.Adam(linear_model.parameters(), lr = lr)
         loss_fn = nn.MSELoss(reduction = "mean")
 
