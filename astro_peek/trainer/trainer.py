@@ -43,10 +43,10 @@ def training(cfg):
         device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Running on device {device}")
     encoder_features_cfg = cfg["encoder_features"]
-    encoder_features = Encoder(encoder_features_cfg).to(device)
+    encoder_features = Encoder(cfg = encoder_features_cfg).to(device)
 
     encoder_labels_cfg = cfg["encoder_labels"]
-    encoder_labels = Encoder(encoder_labels_cfg).to(device)
+    encoder_labels = Encoder(cfg = encoder_labels_cfg).to(device)
 
     assert encoder_labels_cfg["backbone_cfg"]["output_dim"] == encoder_features_cfg["backbone_cfg"]["output_dim"]
     latent_dim =  encoder_labels_cfg["backbone_cfg"]["output_dim"] # output dimension of each net is the latent dim
