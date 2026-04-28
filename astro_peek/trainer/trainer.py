@@ -8,6 +8,9 @@ from astro_peek.nets.encoder_base import Encoder
 from tqdm import tqdm 
 import matplotlib.pyplot as plt 
 import os 
+from info_nce import InfoNCE, info_nce
+# from infonce import InfoNCE, SupervisedInfoNCE
+
 from .transforms import TRANSFORM_REGISTRY
 OPTIMIZER_REGISTRY = {
     "adam": optim.Adam
@@ -70,18 +73,38 @@ def training(cfg):
     
     # CPU tensor only (no .to(device) here)
     if transform_features == "cifar10":
-        train_images = torch.load("/home/ssalhi/scratch/cifar10_data/train_images.pt", weights_only=False)
-        train_images = torch.as_tensor(train_images).squeeze().contiguous()
+        # train_images = torch.load("/home/ssalhi/scratch/cifar10_data/train_images.pt", weights_only=False)
+        # train_images = torch.as_tensor(train_images).squeeze().contiguous()
+
+        # train_loader = DataLoader(
+        #     train_images,
+        #     batch_size=batch_size,
+        #     shuffle=True,
+        #     drop_last=True,
+        #     num_workers=0,          # start with 0 for stability; try 2/4 later
+        #     pin_memory=True,
+        #     # persistent_workers=True,  # only if num_workers > 0
+        # )
+        
+        features = torch.load("/home/ssalhi/scratch/cifar10_data/features.pt", weights_only=False)
+        labels   = torch.load("/home/ssalhi/scratch/cifar10_data/labels.pt",   weights_only=False)
+
+        features = torch.as_tensor(features).contiguous()
+        labels   = torch.as_tensor(labels).contiguous()
+
+        assert len(features) == len(labels), "features/labels size mismatch"
+
+        train_dataset = TensorDataset(features, labels)
 
         train_loader = DataLoader(
-            train_images,
+            train_dataset,
             batch_size=batch_size,
-            shuffle=True,
+            shuffle=True,          # safe: shuffles pairs together
             drop_last=True,
-            num_workers=0,          # start with 0 for stability; try 2/4 later
+            num_workers=0,
             pin_memory=True,
-            # persistent_workers=True,  # only if num_workers > 0
         )
+
 
     for epoch in (pbar:= tqdm(range(int(epochs)))):
         epoch_loss = 0
@@ -89,9 +112,13 @@ def training(cfg):
             train_loader = train_set.iter(batch_size = batch_size, drop_last_batch=True) # makes the dset an iterable
         for batch in train_loader:
             if transform_features is not None:
-                batch = batch.to(device, non_blocking=True)
-                features, labels = TRANSFORM_REGISTRY[transform_features](batch)
-                features, labels = features.float(), labels.float()
+                # batch = batch.to(device, non_blocking=True)
+                # features, labels = TRANSFORM_REGISTRY[transform_features](batch)
+                # features, labels = features.float(), labels.float()
+                features, labels = batch
+                features = features.to(device, non_blocking=True).float()
+                labels   = labels.to(device, non_blocking=True).float()
+
             else:
                 features, labels = batch['image'].to(device), batch['theta'].to(device)
 
@@ -110,45 +137,44 @@ def training(cfg):
                 latent_features = normalize(latent_features) 
                 # latent_S = normalize(latent_S)
 
+            # logits = latent_features @ latent_labels.T  # (B, B)
 
-            logits = latent_features @ latent_labels.T 
+            # log_probs = logits - torch.logsumexp(logits, dim=1, keepdim=True)
+            # loss = -torch.diag(log_probs).mean()
 
-            # Positive pairs are on the diagonal
-            # similarity_score = torch.diag(logits)
-
-            # Normalization is obtained by summing over all the latent labels (the y_0)
-            # S_logits = latent_features @ latent_S.T
-            # log_normalization = torch.logsumexp(S_logits, dim=1)
             
-            # Log-likelihood = f(x)g(y) - log(normalization)
-            # log_likelihood = similarity_score - log_normalization
-            # loss = -log_likelihood.mean() 
-            logits = latent_features @ latent_labels.T  # (B, B)
-
-            log_probs = logits - torch.logsumexp(logits, dim=1, keepdim=True)
-            loss = -torch.diag(log_probs).mean()
-
-            loss.backward()
+            
+            loss = InfoNCE()
+            batch_size, embedding_size = batch_size, 256
+            loss_value = loss(latent_features, latent_labels)
+            
+            # loss_fn = SupervisedInfoNCE(temperature=0.07)
+            # print(latent_features.shape, latent_labels.shape)
+            # loss = loss_fn(latent_features, latent_labels)
+            
+            loss_value.backward()
             optimizer.step()
-            losses.append(loss.item())
-            epoch_loss += loss.item()
-            pbar.set_description(f"Loss = {loss.item():.3f}")   
+            
+            losses.append(loss_value.item())
+            epoch_loss += loss_value.item()
+            pbar.set_description(f"Loss = {loss_value.item():.3f}")   
 
         epoch_losses.append(epoch_loss)
 
-        if ((epoch+1)%10) == 0:
-            fig, axs = plt.subplots(1, 2, figsize = (12, 4))
+    # if ((epoch+1)%10) == 0:
+    fig, axs = plt.subplots(1, 2, figsize = (12, 4))
 
-            ax = axs[0]
-            ax.plot(losses)
-            ax.set(xlabel = "Optimizer steps", ylabel = "Loss") 
+    ax = axs[0]
+    ax.plot(losses)
+    ax.set(xlabel = "Optimizer steps", ylabel = "Loss") 
 
-            
-            ax = axs[1]
-            ax.plot(epoch_losses)
-            ax.set(xlabel = "Epochs", ylabel = "Loss") 
-        plt.savefig('/home/ssalhi/scratch/crl/experiments/cifar10/models/'+f'seed={seed}_latentdim={latent_dim}_epochs={epochs}_losses.png')
-        plt.show()
+    
+    ax = axs[1]
+    ax.plot(epoch_losses)
+    ax.set(xlabel = "Epochs", ylabel = "Loss") 
+        
+    plt.savefig('/home/ssalhi/scratch/crl/experiments/cifar10/models/'+f'seed={seed}_latentdim={latent_dim}_epochs={epochs}_lr={lr}_batchsize={batch_size}_losses.png')
+    plt.show()
             
     # Saving the models (we might want to change that to save the models during the training loop instead according to some criterion)
     print("Saving encoder features model")
@@ -158,7 +184,7 @@ def training(cfg):
         "model_cfg": encoder_features_cfg, 
         "seed": trainer_cfg["seed"]
         }, 
-        encoder_features_cfg["save_dir"] + f"seed_{seed}_latentdim_{latent_dim}.pt"
+        encoder_features_cfg["save_dir"] + f"seed_{seed}_latentdim_{latent_dim}_epochs_{epochs}_lr_{lr}_batchsize_{batch_size}.pt"
     )
     
     print("Saving encoder labels model")
@@ -168,7 +194,7 @@ def training(cfg):
         "model_cfg": encoder_labels_cfg, 
         "seed": trainer_cfg["seed"]
         }, 
-        encoder_labels_cfg["save_dir"] + f"seed_{seed}_latentdim_{latent_dim}.pt"
+        encoder_labels_cfg["save_dir"] + f"seed_{seed}_latentdim_{latent_dim}_epochs_{epochs}_lr_{lr}_batchsize_{batch_size}.pt"
     )
     
     print("saving losses")

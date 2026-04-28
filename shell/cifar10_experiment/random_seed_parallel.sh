@@ -2,13 +2,13 @@
 
 # SLURM parameters for every job submitted
 #SBATCH --tasks=1
-#SBATCH --time=00-01:00         # time (DD-HH:MM)
+#SBATCH --time=00-3:00         # time (DD-HH:MM)
 #SBATCH --account=rrg-lplevass
-#SBATCH --mem=20G
+#SBATCH --mem=10G
 #SBATCH --cpus-per-task=4
-#SBATCH --gpus-per-node=h100_20gb
+#SBATCH --gpus-per-node=h100_40gb
 #SBATCH --job-name=random_seed_parallel
-#SBATCH --array=0-4
+#SBATCH --array=0-1
 #SBATCH --output=jobout/%x_%A_%a.out
 
 module load arrow/16 cuda/12.6
