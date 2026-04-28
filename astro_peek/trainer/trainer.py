@@ -145,7 +145,6 @@ def training(cfg):
             
             
             loss = InfoNCE()
-            batch_size, embedding_size = batch_size, 256
             loss_value = loss(latent_features, latent_labels)
             
             # loss_fn = SupervisedInfoNCE(temperature=0.07)
