@@ -50,15 +50,20 @@ class CCA_Score:
         return corrs
     
     def calculate_mean_cca(self, corrs):
-        '''This function computes the mean CCA values for each latent across all models. 
-        parameters: 
-        - corrs: shape of (nmodels, nmodels, nlatents)
-        
-        returns: 
-        - mean_corrs: mean CCA values across all models for each latent. Shape of (nlatents,)'''
-        mean_corrs = np.mean(corrs, axis=(0,1))
-        
-        return mean_corrs
+            '''This function computes the mean CCA values for each latent across all models. 
+            parameters: 
+            - corrs: shape of (nmodels, nmodels, nlatents)
+            
+            returns: 
+            - mean_corrs: mean CCA values across all models for each latent. Shape of (nlatents,)'''
+            
+            # get the upper triangle of the matrix and exclude the diagonal 
+            iu = np.triu_indices(corrs.shape[0], k=1)
+
+            # means shape: (nlatents,)
+            mean_corrs = corrs[iu[0], iu[1], :].mean(axis=0)
+            
+            return mean_corrs
     
     def plot_cca_v_latent(self, corrs, save_loc=None, models=[0,1], encoder_type='f(x)', mean=False):
         '''This function plots the pairwise CCA values of two models for all latents.
