@@ -16,9 +16,9 @@
 module load arrow/16 cuda/12.6
 source $HOME/causal_env/bin/activate # Environment activation
 
-cd /home/noedia/links/projects/rrg-lplevass/noedia/classes/crl/astro-ml-peek/astro_peek
+cd /home/noedia/projects/rrg-lplevass/noedia/classes/crl/astro-ml-peek/astro_peek
 
-GLOBAL_OUTPUT_DIR=/home/noedia/links/scratch/crl/experiments
+GLOBAL_OUTPUT_DIR=/home/noedia/scratch/crl/experiments
 EXP=rings
 OUTPUT_DIR="$GLOBAL_OUTPUT_DIR/$EXP"
 SEED=42

@@ -10,6 +10,7 @@ class CCA_Score:
     def __init__(self, model_list):
         self.model_list=model_list # should have shape (nmodels, nsamples, ndims) where ndims is the number of latent dimensions. Data should be already mapped to latents before applying CCA
         self.ndims=self.model_list.shape[-1]
+        self.num_models = self.model_list.shape[0]
         
     def compute_all_pairwise_cca(self):
         '''This function computes the pairwise CCA values of all possible pairs of models, using the self.model_list. It requires that all models have the same latent dimensions and 
@@ -56,7 +57,8 @@ class CCA_Score:
         
         returns: 
         - mean_corrs: mean CCA values across all models for each latent. Shape of (nlatents,)'''
-        mean_corrs = np.mean(corrs, axis=(0,1))
+        mask = ~np.eye(5, dtype = np.bool_)
+        mean_corrs = np.mean(corrs[mask], axis=0)
         
         return mean_corrs
     
@@ -136,7 +138,7 @@ class R2_score:
         Output: (len(latent_list), ) = R2 scores.
         """
         # Computing every possible pairs 
-        possible_pairs_idx = combinations(np.arange(len(self.latent_list)))
+        possible_pairs_idx = combinations(np.arange(len(self.latent_list)), r = 2) # just 2 pairs of models at a time
         scores = np.empty(shape = (len(possible_pairs_idx),), dtype = np.float32)
         
         for i, possible_pair in enumerate(possible_pairs_idx): 

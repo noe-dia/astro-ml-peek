@@ -72,19 +72,24 @@ def main(args):
 
     # Creating latent factors and normalizing them...
     radii = prior_sampler_radius(dataset_size) 
-    phis = prior_sampler_phi(dataset_size)
+    phis =  prior_sampler_phi(dataset_size)
     theta = np.stack([radii, phis]).T
 
     # Creating simulations from it 
     images = []
+    convergences = []
     for params in tqdm(theta): 
-        image = simulate_system(*params)
+        image, convergence = simulate_system(*params)
         images.append(image) 
+        convergences.append(convergence)
 
     images = np.array(images)
+    convergences = np.array(convergences)
+    print(images.shape)
     dset = Dataset.from_dict({
                 "theta": theta,
-                "image": images 
+                "image": images, 
+                "lens": convergences
             })
     dset = dset.train_test_split(train_size = 0.8, test_size=0.2, seed=args.seed)
     dset.save_to_disk(args.output_dir)

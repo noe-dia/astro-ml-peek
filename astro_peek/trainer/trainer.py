@@ -7,6 +7,9 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt 
 import os 
 from .transforms import TRANSFORM_REGISTRY
+from torch_ema import ExponentialMovingAverage
+from info_nce import InfoNCE, info_nce
+
 OPTIMIZER_REGISTRY = {
     "adam": optim.Adam
 }
@@ -30,10 +33,10 @@ def training(cfg):
     dset = dset.with_format("torch")
     
     train_set = dset['train']
-    test_set = dset['test']
+    val_set = dset['test']
 
     print('training set size: ', train_set.shape)
-    print('test set size: ', test_set.shape)
+    print('val set size: ', val_set.shape)
     # print('val set size: ', val_set.shape)
 
     # Instantiating the neural networks: 
@@ -57,16 +60,21 @@ def training(cfg):
     optimizer_name = trainer_cfg["optimizer"]
     lr = float(trainer_cfg["lr"])
     optimizer = OPTIMIZER_REGISTRY[optimizer_name](list(encoder_features.parameters()) + list(encoder_labels.parameters()), lr = lr)
+    ema = ExponentialMovingAverage(list(encoder_features.parameters()) + list(encoder_labels.parameters()), decay=0.995)
+    loss_fn= InfoNCE()
+
     transform_features = trainer_cfg["transform"]
 
     # val_set = dset["val"].iter()
     losses = []
     epoch_losses = []
+    val_losses = []
+    val_loss = 0
     print(epochs)
     for epoch in (pbar:= tqdm(range(int(epochs)))): 
         epoch_loss = 0
         train_loader = train_set.iter(batch_size = batch_size, drop_last_batch=True) # makes the dset an iterable
-
+        val_loader = val_set.iter(batch_size = batch_size, drop_last_batch=True)
         for data in train_loader: 
             features, labels = data['image'].to(device), data['theta'].to(device)
             
@@ -87,43 +95,67 @@ def training(cfg):
                 # latent_S = normalize(latent_S)
 
 
-            logits = latent_features @ latent_labels.T 
-
-            # Positive pairs are on the diagonal
-            # similarity_score = torch.diag(logits)
-
-            # Normalization is obtained by summing over all the latent labels (the y_0)
-            # S_logits = latent_features @ latent_S.T
-            # log_normalization = torch.logsumexp(S_logits, dim=1)
+            # logits = latent_features @ latent_labels.T 
+            # log_probs = logits - torch.logsumexp(logits, dim=1, keepdim=True)
+            # loss = -torch.diag(log_probs).mean()
+            # if abs(loss - trainer_cfg["loss_criterion"]) < float(trainer_cfg["delta_criterion"]):
+            #     break
+            loss = loss_fn(latent_features, latent_labels)
+                                
             
-            # Log-likelihood = f(x)g(y) - log(normalization)
-            # log_likelihood = similarity_score - log_normalization
-            # loss = -log_likelihood.mean() 
-            logits = latent_features @ latent_labels.T  # (B, B)
-
-            log_probs = logits - torch.logsumexp(logits, dim=1, keepdim=True)
-            loss = -torch.diag(log_probs).mean()
-
             loss.backward()
             optimizer.step()
+            ema.update()
             losses.append(loss.item())
             epoch_loss += loss.item()
-            pbar.set_description(f"Loss = {loss.item():.3f}")   
-
+            pbar.set_description(f"Train Loss = {loss.item():.3f} | Val Loss = {val_loss:.3f}| Epoch train loss = {epoch_loss:.3f} | ")   
         epoch_losses.append(epoch_loss)
+        # if abs(loss - trainer_cfg["loss_criterion"]) < float(trainer_cfg["delta_criterion"]):
+        #     print(f"Loss criterion reached; Current loss: {loss}, Criterion loss: {trainer_cfg['loss_criterion']}")
+        #     break
+
+        with torch.no_grad(): 
+            for data in val_loader: 
+                features, labels = data['image'].to(device), data['theta'].to(device)
+            
+                if transform_features is not None:
+                    features, labels = TRANSFORM_REGISTRY[transform_features](...) # apply transform to get new features 
+                if labels.ndim == 1: 
+                    labels = labels.unsqueeze(1)
+
+                # Computing similarity scores between all the pairs within the batch for normalization.
+                latent_features = encoder_features(features)
+                latent_labels = encoder_labels(labels)
+                if trainer_cfg["normalize"]:
+                    latent_labels = normalize(latent_labels)
+                    latent_features = normalize(latent_features) 
+
+                # logits = latent_features @ latent_labels.T 
+                # log_probs = logits - torch.logsumexp(logits, dim=1, keepdim=True)
+                # val_loss = -torch.diag(log_probs).mean()
+                val_loss = loss_fn(latent_features, latent_labels)
+                val_losses.append(val_loss.item())
+
+        
+
 
         if ((epoch+1)%10) == 0:
             fig, axs = plt.subplots(1, 2, figsize = (12, 4))
 
             ax = axs[0]
-            ax.plot(losses)
+            ax.plot(losses, label = "Training")
+            ax.plot(val_losses, label = "Validation")
             ax.set(xlabel = "Optimizer steps", ylabel = "Loss") 
+            ax.legend()
 
             
             ax = axs[1]
-            ax.plot(epoch_losses)
+            ax.plot(epoch_losses, label = "Training")
             ax.set(xlabel = "Epochs", ylabel = "Loss") 
+            ax.legend()
             plt.show()
+
+            plt.savefig(encoder_features_cfg["save_dir"] + f"loss_seed_{seed}_latentdim_{latent_dim}.pdf", bbox_inches = "tight")
 
     # Saving the models (we might want to change that to save the models during the training loop instead according to some criterion)
     print("Saving encoder features model")
@@ -131,7 +163,8 @@ def training(cfg):
     torch.save(
         {"model": encoder_features.state_dict(), 
         "model_cfg": encoder_features_cfg, 
-        "seed": trainer_cfg["seed"]
+        "seed": trainer_cfg["seed"],
+         "ema": ema.state_dict()
         }, 
         encoder_features_cfg["save_dir"] + f"seed_{seed}_latentdim_{latent_dim}.pt"
     )
@@ -141,10 +174,11 @@ def training(cfg):
     torch.save(
         {"model": encoder_labels.state_dict(), 
         "model_cfg": encoder_labels_cfg, 
-        "seed": trainer_cfg["seed"]
+        "seed": trainer_cfg["seed"], 
+         "ema": ema.state_dict()
         }, 
         encoder_labels_cfg["save_dir"] + f"seed_{seed}_latentdim_{latent_dim}.pt"
     )
     
     
-    return (encoder_features, encoder_labels, epoch_losses) 
+    return (encoder_features, encoder_labels, losses, epoch_losses, val_losses) 
