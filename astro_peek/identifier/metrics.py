@@ -57,17 +57,12 @@ class CCA_Score:
         
         returns: 
         - mean_corrs: mean CCA values across all models for each latent. Shape of (nlatents,)'''
-<<<<<<< HEAD
-        mask = ~np.eye(5, dtype = np.bool_)
-        mean_corrs = np.mean(corrs[mask], axis=0)
-=======
         
         # get the upper triangle of the matrix and exclude the diagonal 
         iu = np.triu_indices(corrs.shape[0], k=1)
 
         # means shape: (nlatents,)
         mean_corrs = corrs[iu[0], iu[1], :].mean(axis=0)
->>>>>>> b4ed95a66935b11cb80eab1c7706ea0d42a89b32
         
         return mean_corrs
     

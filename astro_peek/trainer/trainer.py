@@ -60,8 +60,11 @@ def training(cfg):
     optimizer_name = trainer_cfg["optimizer"]
     lr = float(trainer_cfg["lr"])
     optimizer = OPTIMIZER_REGISTRY[optimizer_name](list(encoder_features.parameters()) + list(encoder_labels.parameters()), lr = lr)
-    ema = ExponentialMovingAverage(list(encoder_features.parameters()) + list(encoder_labels.parameters()), decay=0.995)
-    loss_fn= InfoNCE()
+    ema_cfg = trainer_cfg["ema_hparams"]
+    if ema_cfg["use_ema"]:
+        print("Using EMA")
+        ema = ExponentialMovingAverage(list(encoder_features.parameters()) + list(encoder_labels.parameters()), decay=0.995)
+    loss_fn = InfoNCE(temperature = 1)
 
     transform_features = trainer_cfg["transform"]
 
@@ -70,11 +73,14 @@ def training(cfg):
     epoch_losses = []
     val_losses = []
     val_loss = 0
-    print(epochs)
+    num_optimizer_steps = len(train_set) // batch_size
+    frac_valset_batch = len(val_set) // batch_size
+
     for epoch in (pbar:= tqdm(range(int(epochs)))): 
         epoch_loss = 0
         train_loader = train_set.iter(batch_size = batch_size, drop_last_batch=True) # makes the dset an iterable
         val_loader = val_set.iter(batch_size = batch_size, drop_last_batch=True)
+        print(num_optimizer_steps)
         for data in train_loader: 
             features, labels = data['image'].to(device), data['theta'].to(device)
             
@@ -101,13 +107,12 @@ def training(cfg):
             # if abs(loss - trainer_cfg["loss_criterion"]) < float(trainer_cfg["delta_criterion"]):
             #     break
             loss = loss_fn(latent_features, latent_labels)
-                                
-            
             loss.backward()
             optimizer.step()
-            ema.update()
+            if ema_cfg["use_ema"]:
+                ema.update()
             losses.append(loss.item())
-            epoch_loss += loss.item()
+            epoch_loss += loss.item() / num_optimizer_steps
             pbar.set_description(f"Train Loss = {loss.item():.3f} | Val Loss = {val_loss:.3f}| Epoch train loss = {epoch_loss:.3f} | ")   
         epoch_losses.append(epoch_loss)
         # if abs(loss - trainer_cfg["loss_criterion"]) < float(trainer_cfg["delta_criterion"]):
@@ -133,8 +138,9 @@ def training(cfg):
                 # logits = latent_features @ latent_labels.T 
                 # log_probs = logits - torch.logsumexp(logits, dim=1, keepdim=True)
                 # val_loss = -torch.diag(log_probs).mean()
-                val_loss = loss_fn(latent_features, latent_labels)
-                val_losses.append(val_loss.item())
+                val_loss += loss_fn(latent_features, latent_labels) / frac_valset_batch
+            val_losses.append(val_loss.item())
+            # Stop criterion in function of the validation score ? 
 
         
 
@@ -144,41 +150,43 @@ def training(cfg):
 
             ax = axs[0]
             ax.plot(losses, label = "Training")
-            ax.plot(val_losses, label = "Validation")
             ax.set(xlabel = "Optimizer steps", ylabel = "Loss") 
             ax.legend()
 
             
             ax = axs[1]
             ax.plot(epoch_losses, label = "Training")
+            ax.plot(val_losses, label = "Validation")
             ax.set(xlabel = "Epochs", ylabel = "Loss") 
             ax.legend()
             plt.show()
 
             plt.savefig(encoder_features_cfg["save_dir"] + f"loss_seed_{seed}_latentdim_{latent_dim}.pdf", bbox_inches = "tight")
 
-    # Saving the models (we might want to change that to save the models during the training loop instead according to some criterion)
-    print("Saving encoder features model")
-    os.makedirs(encoder_features_cfg["save_dir"], exist_ok = True)
-    torch.save(
-        {"model": encoder_features.state_dict(), 
-        "model_cfg": encoder_features_cfg, 
-        "seed": trainer_cfg["seed"],
-         "ema": ema.state_dict()
-        }, 
-        encoder_features_cfg["save_dir"] + f"seed_{seed}_latentdim_{latent_dim}.pt"
-    )
-    
-    print("Saving encoder labels model")
-    os.makedirs(encoder_labels_cfg["save_dir"], exist_ok = True)
-    torch.save(
-        {"model": encoder_labels.state_dict(), 
-        "model_cfg": encoder_labels_cfg, 
-        "seed": trainer_cfg["seed"], 
-         "ema": ema.state_dict()
-        }, 
-        encoder_labels_cfg["save_dir"] + f"seed_{seed}_latentdim_{latent_dim}.pt"
-    )
-    
+
+        if (epoch % 2) == 0: 
+            # Saving the models (we might want to change that to save the models during the training loop instead according to some criterion)
+            print("Saving encoder features model")
+            os.makedirs(encoder_features_cfg["save_dir"], exist_ok = True)
+            torch.save(
+                {"model": encoder_features.state_dict(), 
+                "model_cfg": encoder_features_cfg, 
+                "seed": trainer_cfg["seed"],
+                 "ema": ema.state_dict()
+                }, 
+                encoder_features_cfg["save_dir"] + f"seed_{seed}_latentdim_{latent_dim}_train_loss{epoch_loss:.3f}_val_loss_{val_loss:.3f}.pt"
+            )
+            
+            print("Saving encoder labels model")
+            os.makedirs(encoder_labels_cfg["save_dir"], exist_ok = True)
+            torch.save(
+                {"model": encoder_labels.state_dict(), 
+                "model_cfg": encoder_labels_cfg, 
+                "seed": trainer_cfg["seed"], 
+                 "ema": ema.state_dict()
+                }, 
+                encoder_labels_cfg["save_dir"] + f"seed_{seed}_latentdim_{latent_dim}_train_loss{epoch_loss:.3f}_val_loss_{val_loss:.3f}.pt"
+            )
+            
     
     return (encoder_features, encoder_labels, losses, epoch_losses, val_losses) 

@@ -32,3 +32,6 @@ trainer:
   transform: null
   loss_criterion: 5.601
   delta_criterion: 5e-4
+  ema_hparams:
+      use_ema: true
+      decay: 0.995
