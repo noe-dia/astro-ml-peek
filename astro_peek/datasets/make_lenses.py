@@ -74,7 +74,7 @@ def main(args):
     radii = prior_sampler_radius(dataset_size) 
     phis =  prior_sampler_phi(dataset_size)
     theta = np.stack([radii, phis]).T
-
+    
     # Creating simulations from it 
     images = []
     convergences = []

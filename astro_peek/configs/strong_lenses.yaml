@@ -18,7 +18,7 @@ encoder_labels:
   save_dir: "/home/noedia/links/scratch/crl/experiments/strong_lenses/encoder_labels"
 
 data:
-  path: "/home/noedia/scratch/crl/experiments/strong_lenses/data"
+  path: "/home/noedia/links/scratch/crl/experiments/strong_lenses/data"
   data_split: null
 
 trainer:
@@ -28,7 +28,7 @@ trainer:
   lr: 1e-3
   seed: 42
   device: "auto"
-  normalize: true
+  normalize: false
   transform: null
   loss_criterion: 5.601
   delta_criterion: 5e-4

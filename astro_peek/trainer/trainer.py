@@ -72,15 +72,13 @@ def training(cfg):
     losses = []
     epoch_losses = []
     val_losses = []
-    val_loss = 0
     num_optimizer_steps = len(train_set) // batch_size
     frac_valset_batch = len(val_set) // batch_size
-
+    val_loss = 0
     for epoch in (pbar:= tqdm(range(int(epochs)))): 
         epoch_loss = 0
         train_loader = train_set.iter(batch_size = batch_size, drop_last_batch=True) # makes the dset an iterable
         val_loader = val_set.iter(batch_size = batch_size, drop_last_batch=True)
-        print(num_optimizer_steps)
         for data in train_loader: 
             features, labels = data['image'].to(device), data['theta'].to(device)
             
@@ -119,6 +117,7 @@ def training(cfg):
         #     print(f"Loss criterion reached; Current loss: {loss}, Criterion loss: {trainer_cfg['loss_criterion']}")
         #     break
 
+        val_loss = 0
         with torch.no_grad(): 
             for data in val_loader: 
                 features, labels = data['image'].to(device), data['theta'].to(device)
@@ -139,6 +138,7 @@ def training(cfg):
                 # log_probs = logits - torch.logsumexp(logits, dim=1, keepdim=True)
                 # val_loss = -torch.diag(log_probs).mean()
                 val_loss += loss_fn(latent_features, latent_labels) / frac_valset_batch
+            
             val_losses.append(val_loss.item())
             # Stop criterion in function of the validation score ? 
 
