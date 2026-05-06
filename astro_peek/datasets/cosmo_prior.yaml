@@ -1,0 +1,19 @@
+priors:
+    H0: [50, 20] # uniform takes (lower_bound, upper_bound - lower_bound)
+    ombh2: [0.005, 0.02]
+    omch2: [0.05, 0.15]
+    ns: [0.8, 0.2]
+    As: [1e-9, 5e-9] # loguniform takes in (lower_bound, upper_bound)
+
+
+# kmin, kmax cutoffs for matter power spectrum
+matter_pk:
+    kmin: 5e-4 # Mpc/h
+    kmax: 1e1 # Mpc/h
+
+# kmin, kmax cutoffs for density field computation
+density_field:
+    kmin: 1e-2 
+    kmax: 5e-1
+    img_size: 128 # num cells per row/col
+    fov: 256
