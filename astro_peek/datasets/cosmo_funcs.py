@@ -120,7 +120,7 @@ def plot_volumes(data_list, titles=None, figsize=(12, 4), cmap='RdBu', norm = No
 
 # Utility functions to set up priors from a yaml and to sample it
 from scipy.stats import loguniform, uniform
-def instantiate_priors(cfg): 
+def instantiate_prior(cfg): 
     """
     Hard-coded for the A_s (I know, sry...)
     """
@@ -134,7 +134,7 @@ def instantiate_priors(cfg):
             priors[key] = uniform(float(a), float(b))
     return priors
 
-def sample_priors(priors, num_samples = 1000): 
+def sample_prior(priors, num_samples = 1000): 
     """
     Sample the prior obtained from the func instantiate_priors    
     """
