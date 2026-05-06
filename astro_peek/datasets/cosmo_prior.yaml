@@ -1,0 +1,14 @@
+priors:
+    H0: [50, 20] # uniform takes (lower_bound, upper_bound - lower_bound)
+    ombh2: [0.005, 0.02]
+    omch2: [0.05, 0.15]
+    ns: [0.8, 0.2]
+    As: [1e-9, 2e-8] # loguniform takes in (lower_bound, upper_bound)
+
+matter_pk:
+    kmin: 1e-3
+    kmax: 1e0
+
+density_fields:
+    kmin: 1e-3 # cut-off     
+    kmax: 5e-1
