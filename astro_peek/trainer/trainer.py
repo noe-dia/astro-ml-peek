@@ -145,7 +145,7 @@ def training(cfg):
         
 
 
-        if ((epoch+1)%10) == 0:
+        if ((epoch)%2) == 0:
             fig, axs = plt.subplots(1, 2, figsize = (12, 4))
 
             ax = axs[0]

@@ -1,0 +1,37 @@
+encoder_features:
+  backbone: "cnn"
+  backbone_cfg: 
+    backbone: "efficientnet_v2_s"
+    hidden_dim: 64
+    dropout_rate: 0.
+    output_dim: 5
+  save_dir: "/home/noedia/links/scratch/crl/experiments/lognormal/models/encoder_features"
+
+encoder_labels:
+  backbone: "mlp"
+  backbone_cfg: 
+    input_dim: 300
+    layer_widths: [16, 16, 16]
+    output_dim: 5
+    activation_func: "silu"
+    activate_final: False
+  save_dir: "/home/noedia/links/scratch/crl/experiments/lognormal/models/encoder_labels"
+
+data:
+  path: "/home/noedia/links/scratch/crl/experiments/lognormal/data/lognormal-flat"
+  data_split: null
+
+trainer:
+  epochs: 10  
+  optimizer: "adam"
+  batch_size: 128
+  lr: 1e-4
+  seed: 42
+  device: "auto"
+  normalize: false
+  transform: null
+  loss_criterion: 5.601
+  delta_criterion: 5e-4
+  ema_hparams:
+      use_ema: true
+      decay: 0.995

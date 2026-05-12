@@ -28,12 +28,14 @@ def main(args):
     img_size = int(delta_cfg['img_size'])
     deltas = np.empty(shape = (num_cosmo, num_fields_per_cosmo, img_size, img_size))   # (N_cosmo, N_field_per_cosmo, img_size, img_size)
     pks =   np.empty(shape = (num_cosmo, 300)) # (N_cosmo, 300)
-    dsets = []
+    ks = np.empty(shape = (num_cosmo, 300)) # this is dumb but I want this data.
+
     # Looping over cosmologies to create power spectrum and density contrast fields.
     for i in tqdm(range(num_cosmo)): 
         psi = psis[i]
         prior_sample = {key: psi[i] for i, key in enumerate(prior.keys())}
         k, Pk = compute_pk(prior_sample, **pk_cfg)
+        ks[i] = k
         pks[i] = Pk
 
         for j in range(num_fields_per_cosmo):
@@ -41,17 +43,13 @@ def main(args):
             deltas[i, j] = delta
             seed += 1
 
-        dsets.append(
-            Dataset.from_dict({
-                "power_spectrum": pks,
-                "density_contrast": deltas ,
-                "cosmo_params": psis})
-            )
-        info = DatasetInfo(description = "Dataset of matter power spectra and Lognormal density contrasts for varying (H0, Omega_b, Omega_c, n_s, A_s)")
+    info = DatasetInfo(description = "Dataset of matter power spectra and Lognormal density contrasts for varying (H0, Omega_b, Omega_c, n_s, A_s)")
+    dset = Dataset.from_dict({
+            "power_spectrum": pks,
+            "density_contrast": deltas,
+            "k_bins": ks,
+            "cosmo_params": psis}, info = info)
     
-    print("Concatenating datasets...")
-    dset = concatenate_datasets(dsets, info = info)
-
     print("Saving everything to disk...")
     dset.save_to_disk(args.output_dir)
     
